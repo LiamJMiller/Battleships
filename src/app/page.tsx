@@ -1,95 +1,109 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+/** @format */
+"use client";
 
-export default function Home() {
+import React, { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+interface MessageData {
+  type: string;
+  lobbyCode?: string;
+  message?: string;
+  playerId?: number;
+}
+
+export default function LandingPage() {
+  const [lobbyCode, setLobbyCode] = useState<string>("");
+  const [isCreatingLobby, setIsCreatingLobby] = useState<boolean>(false);
+  const [isJoiningLobby, setIsJoiningLobby] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSocketOpen, setIsSocketOpen] = useState<boolean>(false);
+  const socketRef = useRef<WebSocket | null>(null);
+  const router = useRouter();
+
+  const createWebSocketConnection = () => {
+    socketRef.current = new WebSocket("ws://localhost:7777");
+
+    socketRef.current.onopen = () => {
+      console.log("WebSocket connection opened");
+      setIsSocketOpen(true);
+    };
+
+    socketRef.current.onmessage = (event: MessageEvent) => {
+      const data: MessageData = JSON.parse(event.data);
+      console.log("Received message:", data);
+
+      if (data.type === "createLobbySuccess" && data.lobbyCode) {
+        console.log(`Lobby created with code: ${data.lobbyCode}`);
+        setLobbyCode(data.lobbyCode);
+        joinLobby(data.lobbyCode);
+      } else if (data.type === "joinLobbySuccess" && data.lobbyCode) {
+        console.log(`Joined lobby with code: ${data.lobbyCode}`);
+        router.push(`/waiting?lobbyCode=${data.lobbyCode}`);
+      } else if (data.type === "error" && data.message) {
+        console.error(`Error: ${data.message}`);
+        setErrorMessage(data.message);
+      }
+    };
+
+    socketRef.current.onerror = (error: Event) => {
+      console.error("WebSocket error:", error);
+    };
+
+    socketRef.current.onclose = (event: CloseEvent) => {
+      console.log(
+        `WebSocket connection closed: ${event.code} - ${event.reason}`
+      );
+      setIsSocketOpen(false);
+      if (event.code !== 1000) {
+        setTimeout(() => {
+          createWebSocketConnection();
+        }, 1000);
+      }
+    };
+  };
+
+  const createLobby = () => {
+    if (isCreatingLobby) return;
+    setIsCreatingLobby(true);
+    console.log("Attempting to create lobby...");
+    if (!socketRef.current) {
+      createWebSocketConnection();
+    }
+    const interval = setInterval(() => {
+      if (isSocketOpen) {
+        socketRef.current?.send(JSON.stringify({ type: "createLobby" }));
+        clearInterval(interval);
+      }
+    }, 100);
+  };
+
+  const joinLobby = (code?: string) => {
+    if (isJoiningLobby) return;
+    setIsJoiningLobby(true);
+    setErrorMessage(null);
+    const lobbyCodeToJoin = code || lobbyCode;
+    console.log("Attempting to join lobby...");
+    socketRef.current?.send(
+      JSON.stringify({ type: "joinLobby", lobbyCode: lobbyCodeToJoin })
+    );
+  };
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
+    <div>
+      <h1>Landing Page</h1>
+      <div>
+        <button onClick={createLobby}>Create Lobby</button>
+        <div>
+          <input
+            type="text"
+            value={lobbyCode}
+            onChange={(e) => setLobbyCode(e.target.value)}
+            placeholder="Enter Lobby Code"
+          />
+          <button onClick={() => joinLobby()}>Join Lobby</button>
         </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        {errorMessage && <p style={{ color: "red" }}>{errorMessage}</p>}
+      </div>
     </div>
   );
 }
