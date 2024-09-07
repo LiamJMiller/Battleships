@@ -6,7 +6,7 @@
     "dev": "npm run clean && concurrently \"npm run dev:next\" \"npm run dev:server\"",
     "dev:next": "next dev",
     "dev:server": "node server.js",
-    "build": "next build",
+    "build": "npm run clean && npm run build:next",
     "start": "node server.js",
     "clean": "rimraf build"
   },
