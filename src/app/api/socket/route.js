@@ -8,11 +8,36 @@ let lobbies = {};
 const createLobby = (lobbyCode) => {
   lobbies[lobbyCode] = {
     players: [],
+    readyPlayers: 0,
     isFull: function () {
       return this.players.length >= 2; // Assuming a lobby is full with 2 players
     },
     addPlayer: function (socket) {
       this.players.push(socket);
+      this.broadcastPlayerList();
+    },
+    removePlayer: function (socket) {
+      this.players = this.players.filter((player) => player !== socket);
+      this.broadcastPlayerList();
+    },
+    playerReady: function () {
+      this.readyPlayers += 1;
+    },
+    allPlayersReady: function () {
+      return this.readyPlayers === 2;
+    },
+    broadcastPlayerList: function () {
+      const playerList = this.players.map((player, index) => ({
+        name: `Player ${index + 1}`,
+      }));
+      this.players.forEach((playerSocket) => {
+        playerSocket.send(
+          JSON.stringify({
+            type: "updatePlayers",
+            players: playerList,
+          })
+        );
+      });
     },
   };
 };
@@ -85,6 +110,32 @@ const setupWebSocketServer = (server) => {
             `Failed to join lobby: ${data.lobbyCode} - Invalid code or lobby is full`
           );
         }
+      } else if (data.type === "playerReady") {
+        const lobby = findLobby(data.lobbyCode);
+        if (lobby) {
+          lobby.playerReady();
+          if (lobby.allPlayersReady()) {
+            lobby.players.forEach((playerSocket) => {
+              playerSocket.send(
+                JSON.stringify({
+                  type: "startGame",
+                })
+              );
+            });
+            console.log(`All players ready in lobby: ${data.lobbyCode}`);
+          }
+        }
+      } else if (data.type === "leaveLobby") {
+        const lobby = findLobby(data.lobbyCode);
+        if (lobby) {
+          lobby.removePlayer(socket);
+          socket.send(
+            JSON.stringify({
+              type: "leaveLobbySuccess",
+            })
+          );
+          console.log(`Player left lobby: ${data.lobbyCode}`);
+        }
       }
     });
 
@@ -96,6 +147,10 @@ const setupWebSocketServer = (server) => {
       console.log(
         `WebSocket connection closed: ${event.code} - ${event.reason}`
       );
+      // Remove the player from all lobbies they might be part of
+      Object.values(lobbies).forEach((lobby) => {
+        lobby.removePlayer(socket);
+      });
     });
   });
 

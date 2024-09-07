@@ -1,33 +1,43 @@
 /** @format */
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import React, { useState, useRef, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function WaitingPage() {
-  const searchParams = useSearchParams();
-  const lobbyCode = searchParams.get("lobbyCode");
-  const initialPlayerId = parseInt(searchParams.get("playerId") || "0", 10);
-  const [isGameReady, setIsGameReady] = useState(false);
-  const [playerId, setPlayerId] = useState(initialPlayerId);
+  const [isReady, setIsReady] = useState(false);
+  const [isSocketOpen, setIsSocketOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [players, setPlayers] = useState([]);
   const socketRef = useRef(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const lobbyCode = searchParams.get("lobbyCode");
 
   useEffect(() => {
+    createWebSocketConnection();
+  }, []);
+
+  const createWebSocketConnection = () => {
     socketRef.current = new WebSocket("ws://localhost:7777");
 
     socketRef.current.onopen = () => {
       console.log("WebSocket connection opened");
-      socketRef.current.send(JSON.stringify({ type: "joinLobby", lobbyCode }));
+      setIsSocketOpen(true);
     };
 
     socketRef.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
       console.log("Received message:", data);
-      if (data.type === "start" && data.playerId) {
-        setPlayerId(data.playerId);
-      } else if (data.type === "gameReady") {
-        setIsGameReady(true);
+
+      if (data.type === "startGame") {
+        console.log("Game starting...");
+        router.push(`/game?lobbyCode=${data.lobbyCode}`);
+      } else if (data.type === "updatePlayers") {
+        setPlayers(data.players);
+      } else if (data.type === "error" && data.message) {
+        console.error(`Error: ${data.message}`);
+        setErrorMessage(data.message);
       }
     };
 
@@ -39,26 +49,46 @@ export default function WaitingPage() {
       console.log(
         `WebSocket connection closed: ${event.code} - ${event.reason}`
       );
-    };
-
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.close();
+      setIsSocketOpen(false);
+      if (event.code !== 1000) {
+        setTimeout(() => {
+          createWebSocketConnection();
+        }, 1000);
       }
     };
-  }, [lobbyCode]);
+  };
 
-  const startGame = () => {
-    router.push(`/game?lobbyCode=${lobbyCode}`);
+  const readyUp = () => {
+    if (!isSocketOpen) return;
+    setIsReady(true);
+    socketRef.current?.send(
+      JSON.stringify({ type: "playerReady", lobbyCode: lobbyCode })
+    );
+  };
+
+  const leaveLobby = () => {
+    if (!isSocketOpen) return;
+    socketRef.current?.send(
+      JSON.stringify({ type: "leaveLobby", lobbyCode: lobbyCode })
+    );
+    router.push("/");
   };
 
   return (
     <div>
-      <h1>Waiting for Other Player</h1>
+      <h1>Waiting Page</h1>
       <p>Lobby Code: {lobbyCode}</p>
-      <p>Share this code with another player to join the lobby.</p>
-      {playerId !== null && <p>You are Player {playerId}</p>}
-      {isGameReady && <button onClick={startGame}>Start Game</button>}
+      <button onClick={readyUp} disabled={isReady}>
+        {isReady ? "Ready" : "Ready Up"}
+      </button>
+      <button onClick={leaveLobby}>Leave Lobby</button>
+      {errorMessage && <p style={{ color: "red" }}>{errorMessage}</p>}
+      <h2>Players</h2>
+      <ul>
+        {players.map((player, index) => (
+          <li key={index}>{player.name}</li>
+        ))}
+      </ul>
     </div>
   );
 }
