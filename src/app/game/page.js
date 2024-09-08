@@ -1,80 +1,42 @@
 /** @format */
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import GameBoard from "../components/GameBoard"; // Ensure you have this component created
+import React, { useState, useEffect } from "react";
+import GameBoard from "../components/Board"; // Ensure you have this component created
 
-export default function Game() {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const socketRef = useRef(null); // Use useRef to maintain WebSocket instance
-
-  const [playerId, setPlayerId] = useState(null);
+export default function Game({ socket, playerId, initialBoards }) {
   const [currentTurn, setCurrentTurn] = useState(1); // Player 1 starts
-  const [playerBoards, setPlayerBoards] = useState({
-    1: Array.from({ length: 10 }, () => Array(10).fill(0)), // Player 1's board
-    2: Array.from({ length: 10 }, () => Array(10).fill(0)), // Player 2's board
-  });
+  const [playerBoards, setPlayerBoards] = useState(initialBoards);
   const [placingShip, setPlacingShip] = useState(true); // State to track if we are placing a ship
   const [hits, setHits] = useState([]); // Track hits
   const [waiting, setWaiting] = useState(true); // State to track if waiting for an opponent
 
   useEffect(() => {
-    // Establish WebSocket connection
-    socketRef.current = new WebSocket("ws://localhost:7777");
+    if (socket) {
+      socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.log("Message received from server:", data);
 
-    socketRef.current.onopen = () => {
-      console.log("Connected to WebSocket server");
-    };
+        if (data.type === "waiting") {
+          setWaiting(true);
+        } else if (data.type === "start") {
+          setWaiting(false);
+        } else if (data.type === "move") {
+          handleOpponentMove(data.rowIndex, data.colIndex);
+        }
+      };
 
-    socketRef.current.onmessage = async (event) => {
-      const data = JSON.parse(event.data);
-      console.log("Message received from server:", data);
+      socket.onerror = (error) => {
+        console.error("WebSocket error:", error);
+      };
 
-      if (data.type === "waiting") {
-        setWaiting(true);
-      } else if (data.type === "start") {
-        setPlayerId(data.playerId);
-        setWaiting(false);
-      } else if (data.type === "move") {
-        handleOpponentMove(data.rowIndex, data.colIndex);
-      }
-    };
-
-    socketRef.current.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
-
-    socketRef.current.onclose = (event) => {
-      console.log(
-        `WebSocket connection closed: ${event.code} - ${event.reason}`
-      );
-    };
-
-    // Clean up the connection when the component unmounts
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.close();
-      }
-    };
-  }, []);
-
-  const sendMessage = () => {
-    if (
-      input &&
-      socketRef.current &&
-      socketRef.current.readyState === WebSocket.OPEN
-    ) {
-      socketRef.current.send(input);
-      console.log("Message sent to server:", input);
-      setInput("");
-    } else {
-      console.error(
-        "WebSocket is not open. Ready state:",
-        socketRef.current.readyState
-      );
+      socket.onclose = (event) => {
+        console.log(
+          `WebSocket connection closed: ${event.code} - ${event.reason}`
+        );
+      };
     }
-  };
+  }, [socket]);
 
   const handleCellClick = (rowIndex, colIndex) => {
     if (placingShip) {
@@ -93,9 +55,7 @@ export default function Game() {
         setHits([...hits, { rowIndex, colIndex }]);
       }
       // Send move to the server
-      socketRef.current.send(
-        JSON.stringify({ type: "move", rowIndex, colIndex })
-      );
+      socket.send(JSON.stringify({ type: "move", rowIndex, colIndex }));
       // Switch turn
       setCurrentTurn(3 - playerId);
     }
@@ -116,24 +76,16 @@ export default function Game() {
         <div>Waiting for an opponent...</div>
       ) : (
         <>
-          <div>
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-            />
-            <button onClick={sendMessage}>Send</button>
-          </div>
-          <ul>
-            {messages.map((message, index) => (
-              <li key={index}>{message}</li>
-            ))}
-          </ul>
           {playerId && (
             <>
               <h2>Player {playerId}'s Board</h2>
-              <GameBoard
+              <Board
                 board={playerBoards[playerId]}
+                onCellClick={handleCellClick}
+              />
+              <h2>Opponent's Board</h2>
+              <Board
+                board={playerBoards[3 - playerId]}
                 onCellClick={handleCellClick}
               />
             </>

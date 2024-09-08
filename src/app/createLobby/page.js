@@ -17,9 +17,7 @@ export default function CreateLobbyPage() {
   }, []);
 
   const createWebSocketConnection = () => {
-    socketRef.current = new WebSocket(
-      process.env.NEXT_PUBLIC_WEBSOCKET_SERVER_URL
-    );
+    socketRef.current = new WebSocket(process.env.NEXT_PUBLIC_WEBSOCKET_URL);
 
     socketRef.current.onopen = () => {
       console.log("WebSocket connection opened");

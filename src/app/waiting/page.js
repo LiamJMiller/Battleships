@@ -3,6 +3,9 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Board from "../components/Board"; // Ensure you have this component created
+import { useGameLogic } from "../hooks/useGameLogic"; // Import the custom hook
+import { ships } from "../utils/GameLogic"; // Import ships from GameLogic.js
 
 export default function WaitingPage() {
   const [isReady, setIsReady] = useState(false);
@@ -14,6 +17,14 @@ export default function WaitingPage() {
   const searchParams = useSearchParams();
   const lobbyCode = searchParams.get("lobbyCode");
   const playerName = searchParams.get("playerName");
+
+  const {
+    playerBoard,
+    currentShipIndex,
+    orientation,
+    handleCellClick,
+    rotateShip,
+  } = useGameLogic();
 
   useEffect(() => {
     createWebSocketConnection();
@@ -40,7 +51,7 @@ export default function WaitingPage() {
 
       if (data.type === "startGame") {
         console.log("Game starting...");
-        router.push(`/game?lobbyCode=${data.lobbyCode}`);
+        router.push(`/game?lobbyCode=${lobbyCode}&playerName=${playerName}`);
       } else if (data.type === "updatePlayers") {
         setPlayers(data.players);
       } else if (data.type === "message") {
@@ -92,11 +103,18 @@ export default function WaitingPage() {
     <div className="container">
       <h1 className="heading">Waiting Page</h1>
       <p>Lobby Code: {lobbyCode}</p>
-      <button className="button" onClick={toggleReady} disabled={!isSocketOpen}>
+      <button
+        className="button"
+        onClick={toggleReady}
+        disabled={!isSocketOpen || currentShipIndex < ships.length}
+      >
         {isReady ? "Unready" : "Ready Up"}
       </button>
       <button className="button" onClick={leaveLobby}>
         Leave Lobby
+      </button>
+      <button className="button" onClick={rotateShip}>
+        Rotate Ship
       </button>
       {errorMessage && <p className="error">{errorMessage}</p>}
       <h2>Players</h2>
@@ -105,6 +123,11 @@ export default function WaitingPage() {
           <li key={index}>{player.name}</li>
         ))}
       </ul>
+      <h2>Your Board</h2>
+      <Board
+        board={playerBoard}
+        onCellClick={(row, col) => handleCellClick("player", row, col)}
+      />
     </div>
   );
 }
