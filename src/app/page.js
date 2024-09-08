@@ -6,11 +6,16 @@ import { useRouter } from "next/navigation";
 
 export default function LandingPage() {
   const [lobbyCode, setLobbyCode] = useState("");
+  const [playerName, setPlayerName] = useState("");
   const [errorMessage, setErrorMessage] = useState(null);
   const router = useRouter();
 
   const createLobby = () => {
-    router.push("/createLobby");
+    if (!playerName) {
+      setErrorMessage("Please enter your name.");
+      return;
+    }
+    router.push(`/createLobby?playerName=${playerName}`);
   };
 
   const joinLobby = () => {
@@ -18,24 +23,40 @@ export default function LandingPage() {
       setErrorMessage("Please enter a lobby code.");
       return;
     }
-    router.push(`/waiting?lobbyCode=${lobbyCode}`);
+    if (!playerName) {
+      setErrorMessage("Please enter your name.");
+      return;
+    }
+    router.push(`/waiting?lobbyCode=${lobbyCode}&playerName=${playerName}`);
   };
 
   return (
-    <div>
-      <h1>Landing Page</h1>
-      <div>
-        <button onClick={createLobby}>Create Lobby</button>
-        <div>
+    <div className="container">
+      <h1 className="heading">Landing Page</h1>
+      <div className="form">
+        <input
+          type="text"
+          value={playerName}
+          onChange={(e) => setPlayerName(e.target.value)}
+          placeholder="Enter Your Name"
+          className="input"
+        />
+        <button className="button" onClick={createLobby}>
+          Create Lobby
+        </button>
+        <div className="input-group">
           <input
             type="text"
             value={lobbyCode}
             onChange={(e) => setLobbyCode(e.target.value)}
             placeholder="Enter Lobby Code"
+            className="input"
           />
-          <button onClick={joinLobby}>Join Lobby</button>
+          <button className="button" onClick={joinLobby}>
+            Join Lobby
+          </button>
         </div>
-        {errorMessage && <p style={{ color: "red" }}>{errorMessage}</p>}
+        {errorMessage && <p className="error">{errorMessage}</p>}
       </div>
     </div>
   );

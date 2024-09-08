@@ -13,6 +13,7 @@ export default function WaitingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const lobbyCode = searchParams.get("lobbyCode");
+  const playerName = searchParams.get("playerName");
 
   useEffect(() => {
     createWebSocketConnection();
@@ -24,6 +25,13 @@ export default function WaitingPage() {
     socketRef.current.onopen = () => {
       console.log("WebSocket connection opened");
       setIsSocketOpen(true);
+      socketRef.current.send(
+        JSON.stringify({
+          type: "joinLobby",
+          lobbyCode: lobbyCode,
+          playerName: playerName,
+        })
+      );
     };
 
     socketRef.current.onmessage = (event) => {
@@ -35,6 +43,8 @@ export default function WaitingPage() {
         router.push(`/game?lobbyCode=${data.lobbyCode}`);
       } else if (data.type === "updatePlayers") {
         setPlayers(data.players);
+      } else if (data.type === "message") {
+        console.log(data.message);
       } else if (data.type === "error" && data.message) {
         console.error(`Error: ${data.message}`);
         setErrorMessage(data.message);
@@ -58,11 +68,15 @@ export default function WaitingPage() {
     };
   };
 
-  const readyUp = () => {
+  const toggleReady = () => {
     if (!isSocketOpen) return;
-    setIsReady(true);
+    const newReadyState = !isReady;
+    setIsReady(newReadyState);
     socketRef.current?.send(
-      JSON.stringify({ type: "playerReady", lobbyCode: lobbyCode })
+      JSON.stringify({
+        type: newReadyState ? "playerReady" : "playerUnready",
+        lobbyCode: lobbyCode,
+      })
     );
   };
 
@@ -75,16 +89,18 @@ export default function WaitingPage() {
   };
 
   return (
-    <div>
-      <h1>Waiting Page</h1>
+    <div className="container">
+      <h1 className="heading">Waiting Page</h1>
       <p>Lobby Code: {lobbyCode}</p>
-      <button onClick={readyUp} disabled={isReady}>
-        {isReady ? "Ready" : "Ready Up"}
+      <button className="button" onClick={toggleReady} disabled={!isSocketOpen}>
+        {isReady ? "Unready" : "Ready Up"}
       </button>
-      <button onClick={leaveLobby}>Leave Lobby</button>
-      {errorMessage && <p style={{ color: "red" }}>{errorMessage}</p>}
+      <button className="button" onClick={leaveLobby}>
+        Leave Lobby
+      </button>
+      {errorMessage && <p className="error">{errorMessage}</p>}
       <h2>Players</h2>
-      <ul>
+      <ul className="players-list">
         {players.map((player, index) => (
           <li key={index}>{player.name}</li>
         ))}

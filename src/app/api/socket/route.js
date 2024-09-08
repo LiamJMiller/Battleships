@@ -9,16 +9,31 @@ const createLobby = (lobbyCode) => {
   lobbies[lobbyCode] = {
     players: [],
     readyPlayers: 0,
+    leaveTimeout: null,
     isFull: function () {
       return this.players.length >= 2; // Assuming a lobby is full with 2 players
     },
-    addPlayer: function (socket) {
-      this.players.push(socket);
+    addPlayer: function (socket, playerName) {
+      this.players.push({ socket, playerName });
       this.broadcastPlayerList();
+      this.broadcastMessage(`${playerName} has joined lobby ${lobbyCode}`);
+      if (this.leaveTimeout) {
+        clearTimeout(this.leaveTimeout);
+        this.leaveTimeout = null;
+      }
     },
     removePlayer: function (socket) {
-      this.players = this.players.filter((player) => player !== socket);
+      const player = this.players.find((player) => player.socket === socket);
+      this.players = this.players.filter((player) => player.socket !== socket);
       this.broadcastPlayerList();
+      if (this.players.length === 0) {
+        this.leaveTimeout = setTimeout(() => {
+          this.closeLobby();
+        }, 30000); // 30 seconds
+      }
+      if (player) {
+        this.broadcastMessage(`${player.playerName} has left the lobby`);
+      }
     },
     playerReady: function () {
       this.readyPlayers += 1;
@@ -27,17 +42,34 @@ const createLobby = (lobbyCode) => {
       return this.readyPlayers === 2;
     },
     broadcastPlayerList: function () {
-      const playerList = this.players.map((player, index) => ({
-        name: `Player ${index + 1}`,
+      const playerList = this.players.map((player) => ({
+        name: player.playerName,
       }));
-      this.players.forEach((playerSocket) => {
-        playerSocket.send(
+      this.players.forEach((player) => {
+        player.socket.send(
           JSON.stringify({
             type: "updatePlayers",
             players: playerList,
           })
         );
       });
+    },
+    broadcastMessage: function (message) {
+      this.players.forEach((player) => {
+        player.socket.send(
+          JSON.stringify({
+            type: "message",
+            message: message,
+          })
+        );
+      });
+    },
+    closeLobby: function () {
+      this.players.forEach((player) => {
+        player.socket.close(1000, "Lobby closed due to inactivity");
+      });
+      delete lobbies[lobbyCode];
+      console.log(`Lobby ${lobbyCode} closed due to inactivity`);
     },
   };
 };
@@ -91,14 +123,16 @@ const setupWebSocketServer = (server) => {
         }
 
         if (lobby && !lobby.isFull()) {
-          lobby.addPlayer(socket);
+          lobby.addPlayer(socket, data.playerName);
           socket.send(
             JSON.stringify({
               type: "joinLobbySuccess",
               lobbyCode: data.lobbyCode,
             })
           );
-          console.log(`Player joined lobby: ${data.lobbyCode}`);
+          console.log(
+            `Player ${data.playerName} joined lobby: ${data.lobbyCode}`
+          );
         } else {
           socket.send(
             JSON.stringify({
@@ -115,8 +149,8 @@ const setupWebSocketServer = (server) => {
         if (lobby) {
           lobby.playerReady();
           if (lobby.allPlayersReady()) {
-            lobby.players.forEach((playerSocket) => {
-              playerSocket.send(
+            lobby.players.forEach((player) => {
+              player.socket.send(
                 JSON.stringify({
                   type: "startGame",
                 })
@@ -125,16 +159,15 @@ const setupWebSocketServer = (server) => {
             console.log(`All players ready in lobby: ${data.lobbyCode}`);
           }
         }
+      } else if (data.type === "playerUnready") {
+        const lobby = findLobby(data.lobbyCode);
+        if (lobby) {
+          lobby.readyPlayers -= 1;
+        }
       } else if (data.type === "leaveLobby") {
         const lobby = findLobby(data.lobbyCode);
         if (lobby) {
           lobby.removePlayer(socket);
-          socket.send(
-            JSON.stringify({
-              type: "leaveLobbySuccess",
-            })
-          );
-          console.log(`Player left lobby: ${data.lobbyCode}`);
         }
       }
     });
@@ -147,10 +180,6 @@ const setupWebSocketServer = (server) => {
       console.log(
         `WebSocket connection closed: ${event.code} - ${event.reason}`
       );
-      // Remove the player from all lobbies they might be part of
-      Object.values(lobbies).forEach((lobby) => {
-        lobby.removePlayer(socket);
-      });
     });
   });
 
