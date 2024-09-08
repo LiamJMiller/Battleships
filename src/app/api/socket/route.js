@@ -1,6 +1,9 @@
 /** @format */
 
-// src/app/api/socket/Route.js
+require("dotenv").config();
+
+const WEBSOCKET_SERVER_URL =
+  process.env.WEBSOCKET_SERVER_URL || "ws://localhost:7777";
 
 let lobbies = {};
 
