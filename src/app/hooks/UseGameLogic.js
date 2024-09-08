@@ -1,27 +1,22 @@
 /** @format */
 
 import { useState } from "react";
-import {
-  createEmptyBoard,
-  ships,
-  canPlaceShip,
-  placeShip,
-} from "../Utils/GameLogic";
+import { createEmptyBoard, canPlaceShip, placeShip } from "../utils/gameLogic"; // Ensure these functions are correctly imported
+import { ships } from "../utils/gameLogic"; // Import ships from gameLogic.js
 
 export const useGameLogic = () => {
   const [playerBoard, setPlayerBoard] = useState(createEmptyBoard());
-  const [opponentBoard, setOpponentBoard] = useState(createEmptyBoard());
   const [currentShipIndex, setCurrentShipIndex] = useState(0);
-  const [orientation, setOrientation] = useState("horizontal"); // "horizontal" or "vertical"
+  const [orientation, setOrientation] = useState("horizontal");
 
   const handleCellClick = (boardType, rowIndex, cellIndex) => {
     if (boardType === "player") {
-      placeShipOnBoard(rowIndex, cellIndex);
+      placeShipOnBoard(rowIndex, cellIndex, ships[currentShipIndex]);
     }
   };
 
-  const placeShipOnBoard = (rowIndex, cellIndex) => {
-    const ship = ships[currentShipIndex];
+  const placeShipOnBoard = (rowIndex, cellIndex, ship) => {
+    console.log("Placing ship:", ship);
     if (
       canPlaceShip(playerBoard, rowIndex, cellIndex, ship.size, orientation)
     ) {
@@ -34,7 +29,10 @@ export const useGameLogic = () => {
       );
       setPlayerBoard(newBoard);
       setCurrentShipIndex(currentShipIndex + 1);
+      return true;
     }
+    console.log("Cannot place ship at:", rowIndex, cellIndex);
+    return false;
   };
 
   const rotateShip = () => {
@@ -43,10 +41,10 @@ export const useGameLogic = () => {
 
   return {
     playerBoard,
-    opponentBoard,
     currentShipIndex,
     orientation,
     handleCellClick,
     rotateShip,
+    placeShipOnBoard,
   };
 };

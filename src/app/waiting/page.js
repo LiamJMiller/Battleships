@@ -3,9 +3,10 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Board from "../components/Board"; // Ensure you have this component created
+import Board from "../components/Board"; // Import the GameBoard component
+import Ship from "../components/Ship"; // Import the Ship component
 import { useGameLogic } from "../hooks/useGameLogic"; // Import the custom hook
-import { ships } from "../utils/GameLogic"; // Import ships from GameLogic.js
+import { ships } from "../utils/gameLogic"; // Import ships from GameLogic.js
 
 export default function WaitingPage() {
   const [isReady, setIsReady] = useState(false);
@@ -24,6 +25,7 @@ export default function WaitingPage() {
     orientation,
     handleCellClick,
     rotateShip,
+    placeShipOnBoard,
   } = useGameLogic();
 
   useEffect(() => {
@@ -99,6 +101,24 @@ export default function WaitingPage() {
     router.push("/");
   };
 
+  const handleDragStart = (e, ship) => {
+    console.log("Drag Start:", ship);
+    e.dataTransfer.setData("ship", JSON.stringify(ship));
+  };
+
+  const handleDrop = (e, rowIndex, colIndex) => {
+    const ship = JSON.parse(e.dataTransfer.getData("ship"));
+    console.log("Drop:", ship);
+    const success = placeShipOnBoard(rowIndex, colIndex, ship);
+    if (!success) {
+      console.error("Failed to place ship at:", rowIndex, colIndex);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
   return (
     <div className="container">
       <h1 className="heading">Waiting Page</h1>
@@ -127,7 +147,20 @@ export default function WaitingPage() {
       <Board
         board={playerBoard}
         onCellClick={(row, col) => handleCellClick("player", row, col)}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
       />
+      <h2>Ships</h2>
+      <div className="ships-container">
+        {ships.map((ship, index) => (
+          <Ship
+            key={index}
+            ship={ship}
+            orientation={orientation}
+            onDragStart={handleDragStart}
+          />
+        ))}
+      </div>
     </div>
   );
 }
