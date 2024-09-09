@@ -1,20 +1,16 @@
 /** @format */
 
-require("dotenv").config();
-
-const WEBSOCKET_SERVER_URL =
-  process.env.WEBSOCKET_SERVER_URL || "ws://localhost:7777";
+import { Server } from "ws";
 
 let lobbies = {};
 
-// Function to create a new lobby
 const createLobby = (lobbyCode) => {
   lobbies[lobbyCode] = {
     players: [],
     readyPlayers: 0,
     leaveTimeout: null,
     isFull: function () {
-      return this.players.length >= 2; // Assuming a lobby is full with 2 players
+      return this.players.length >= 2;
     },
     addPlayer: function (socket, playerName) {
       this.players.push({ socket, playerName });
@@ -32,7 +28,7 @@ const createLobby = (lobbyCode) => {
       if (this.players.length === 0) {
         this.leaveTimeout = setTimeout(() => {
           this.closeLobby();
-        }, 30000); // 30 seconds
+        }, 30000);
       }
       if (player) {
         this.broadcastMessage(`${player.playerName} has left the lobby`);
@@ -77,28 +73,16 @@ const createLobby = (lobbyCode) => {
   };
 };
 
-// Function to find a lobby by code
 const findLobby = (lobbyCode) => {
   return lobbies[lobbyCode];
 };
 
-const GET = (req, res) => {
-  const activeLobbies = Object.keys(lobbies).map((code) => ({
-    code,
-    players: lobbies[code].players.length,
-  }));
-  res.status(200).json(activeLobbies);
-};
-
-// Function to generate a unique lobby code
 const generateLobbyCode = () => {
-  return Math.random().toString(36).substr(2, 5); // Generates a random 5-character string
+  return Math.random().toString(36).substr(2, 5);
 };
 
-// WebSocket server setup
-const setupWebSocketServer = (server) => {
-  const WebSocket = require("ws");
-  const websocketServer = new WebSocket.Server({ server });
+export function setupWebSocketServer(server) {
+  const websocketServer = new Server({ server });
 
   websocketServer.on("connection", (socket) => {
     console.log("New WebSocket connection established");
@@ -189,6 +173,4 @@ const setupWebSocketServer = (server) => {
   websocketServer.on("error", (error) => {
     console.error("WebSocket server error:", error);
   });
-};
-
-module.exports = { GET, setupWebSocketServer };
+}
