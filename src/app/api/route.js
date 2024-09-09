@@ -81,96 +81,110 @@ const generateLobbyCode = () => {
   return Math.random().toString(36).substr(2, 5);
 };
 
-export function setupWebSocketServer(server) {
-  const websocketServer = new WebSocketServer({ server });
+let websocketServer;
 
-  websocketServer.on("connection", (socket) => {
-    console.log("New WebSocket connection established");
+export default function handler(req, res) {
+  if (!websocketServer) {
+    websocketServer = new WebSocketServer({ noServer: true });
 
-    socket.on("message", (message) => {
-      const data = JSON.parse(message);
-      console.log("Received message:", data);
+    websocketServer.on("connection", (socket) => {
+      console.log("New WebSocket connection established");
 
-      if (data.type === "createLobby") {
-        const lobbyCode = generateLobbyCode();
-        createLobby(lobbyCode);
-        socket.send(
-          JSON.stringify({
-            type: "createLobbySuccess",
-            lobbyCode: lobbyCode,
-          })
-        );
-        console.log(`Lobby created with code: ${lobbyCode}`);
-      } else if (data.type === "joinLobby") {
-        let lobby = findLobby(data.lobbyCode);
-        if (!lobby) {
-          console.log(`Lobby not found, creating new lobby: ${data.lobbyCode}`);
-          createLobby(data.lobbyCode);
-          lobby = findLobby(data.lobbyCode);
-        }
+      socket.on("message", (message) => {
+        const data = JSON.parse(message);
+        console.log("Received message:", data);
 
-        if (lobby && !lobby.isFull()) {
-          lobby.addPlayer(socket, data.playerName);
+        if (data.type === "createLobby") {
+          const lobbyCode = generateLobbyCode();
+          createLobby(lobbyCode);
           socket.send(
             JSON.stringify({
-              type: "joinLobbySuccess",
-              lobbyCode: data.lobbyCode,
+              type: "createLobbySuccess",
+              lobbyCode: lobbyCode,
             })
           );
-          console.log(
-            `Player ${data.playerName} joined lobby: ${data.lobbyCode}`
-          );
-        } else {
-          socket.send(
-            JSON.stringify({
-              type: "joinLobbyError",
-              message: "Invalid code or lobby is full",
-            })
-          );
-          console.log(
-            `Failed to join lobby: ${data.lobbyCode} - Invalid code or lobby is full`
-          );
-        }
-      } else if (data.type === "playerReady") {
-        const lobby = findLobby(data.lobbyCode);
-        if (lobby) {
-          lobby.playerReady();
-          if (lobby.allPlayersReady()) {
-            lobby.players.forEach((player) => {
-              player.socket.send(
-                JSON.stringify({
-                  type: "startGame",
-                })
-              );
-            });
-            console.log(`All players ready in lobby: ${data.lobbyCode}`);
+          console.log(`Lobby created with code: ${lobbyCode}`);
+        } else if (data.type === "joinLobby") {
+          let lobby = findLobby(data.lobbyCode);
+          if (!lobby) {
+            console.log(
+              `Lobby not found, creating new lobby: ${data.lobbyCode}`
+            );
+            createLobby(data.lobbyCode);
+            lobby = findLobby(data.lobbyCode);
+          }
+
+          if (lobby && !lobby.isFull()) {
+            lobby.addPlayer(socket, data.playerName);
+            socket.send(
+              JSON.stringify({
+                type: "joinLobbySuccess",
+                lobbyCode: data.lobbyCode,
+              })
+            );
+            console.log(
+              `Player ${data.playerName} joined lobby: ${data.lobbyCode}`
+            );
+          } else {
+            socket.send(
+              JSON.stringify({
+                type: "joinLobbyError",
+                message: "Invalid code or lobby is full",
+              })
+            );
+            console.log(
+              `Failed to join lobby: ${data.lobbyCode} - Invalid code or lobby is full`
+            );
+          }
+        } else if (data.type === "playerReady") {
+          const lobby = findLobby(data.lobbyCode);
+          if (lobby) {
+            lobby.playerReady();
+            if (lobby.allPlayersReady()) {
+              lobby.players.forEach((player) => {
+                player.socket.send(
+                  JSON.stringify({
+                    type: "startGame",
+                  })
+                );
+              });
+              console.log(`All players ready in lobby: ${data.lobbyCode}`);
+            }
+          }
+        } else if (data.type === "playerUnready") {
+          const lobby = findLobby(data.lobbyCode);
+          if (lobby) {
+            lobby.readyPlayers -= 1;
+          }
+        } else if (data.type === "leaveLobby") {
+          const lobby = findLobby(data.lobbyCode);
+          if (lobby) {
+            lobby.removePlayer(socket);
           }
         }
-      } else if (data.type === "playerUnready") {
-        const lobby = findLobby(data.lobbyCode);
-        if (lobby) {
-          lobby.readyPlayers -= 1;
-        }
-      } else if (data.type === "leaveLobby") {
-        const lobby = findLobby(data.lobbyCode);
-        if (lobby) {
-          lobby.removePlayer(socket);
-        }
-      }
+      });
+
+      socket.on("error", (error) => {
+        console.error("WebSocket error:", error);
+      });
+
+      socket.on("close", (event) => {
+        console.log(
+          `WebSocket connection closed: ${event.code} - ${event.reason}`
+        );
+      });
     });
 
-    socket.on("error", (error) => {
-      console.error("WebSocket error:", error);
+    websocketServer.on("error", (error) => {
+      console.error("WebSocket server error:", error);
     });
 
-    socket.on("close", (event) => {
-      console.log(
-        `WebSocket connection closed: ${event.code} - ${event.reason}`
-      );
+    server.on("upgrade", (request, socket, head) => {
+      websocketServer.handleUpgrade(request, socket, head, (ws) => {
+        websocketServer.emit("connection", ws, request);
+      });
     });
-  });
+  }
 
-  websocketServer.on("error", (error) => {
-    console.error("WebSocket server error:", error);
-  });
+  res.status(200).json({ message: "WebSocket server is running" });
 }
