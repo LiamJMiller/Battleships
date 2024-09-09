@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export default function CreateLobbyPage() {
-  const [isSocketOpen, setIsSocketOpen] = useState(false);
+  // const [isSocketOpen, setIsSocketOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const socketRef = useRef(null);
   const router = useRouter();

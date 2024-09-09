@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import GameBoard from "../components/Board"; // Ensure you have this component created
+import Board from "../components/Board"; // Ensure you have this component created
 
 export default function Game({ socket, playerId, initialBoards }) {
   const [currentTurn, setCurrentTurn] = useState(1); // Player 1 starts

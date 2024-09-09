@@ -11,7 +11,6 @@ import "../globals.css"; // Import global styles
 
 export default function WaitingPage() {
   const [isReady, setIsReady] = useState(false);
-  const [isSocketOpen, setIsSocketOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [players, setPlayers] = useState([]);
   const [placedShips, setPlacedShips] = useState([]); // Track placed ships
@@ -32,7 +31,7 @@ export default function WaitingPage() {
 
   useEffect(() => {
     createWebSocketConnection();
-  }, []);
+  }, [createWebSocketConnection]);
 
   const createWebSocketConnection = () => {
     const websocketUrl =
