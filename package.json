@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "npm run clean && concurrently \"npm run dev:next\" \"npm run dev:server\"",
-    "dev:next": "next dev",
+    "dev": "npm run clean && concurrently \"npm run next\" \"npm run dev:server\"",
+    "next": "next dev",
     "dev:server": "node server.js",
     "build": "next build",
     "start": "node server.js",

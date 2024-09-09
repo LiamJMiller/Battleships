@@ -7,12 +7,14 @@ import Board from "../components/Board"; // Ensure you have this component creat
 import Ship from "../components/Ship"; // Import the Ship component
 import { useGameLogic } from "../hooks/useGameLogic"; // Import the custom hook
 import { ships } from "../utils/gameLogic"; // Import ships from GameLogic.js
+import "../globals.css"; // Import global styles
 
 export default function WaitingPage() {
   const [isReady, setIsReady] = useState(false);
   const [isSocketOpen, setIsSocketOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [players, setPlayers] = useState([]);
+  const [placedShips, setPlacedShips] = useState([]); // Track placed ships
   const socketRef = useRef(null);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -102,6 +104,7 @@ export default function WaitingPage() {
   };
 
   const handleDragStart = (e, ship) => {
+    if (placedShips.includes(ship.name)) return; // Prevent dragging if ship is already placed
     console.log("Drag Start:", ship);
     e.dataTransfer.setData("ship", JSON.stringify(ship));
   };
@@ -110,7 +113,9 @@ export default function WaitingPage() {
     const ship = JSON.parse(e.dataTransfer.getData("ship"));
     console.log("Drop:", ship);
     const success = placeShipOnBoard(rowIndex, colIndex, ship);
-    if (!success) {
+    if (success) {
+      setPlacedShips([...placedShips, ship.name]); // Mark ship as placed
+    } else {
       console.error("Failed to place ship at:", rowIndex, colIndex);
     }
   };
@@ -158,6 +163,7 @@ export default function WaitingPage() {
             ship={ship}
             orientation={orientation}
             onDragStart={handleDragStart}
+            draggable={!placedShips.includes(ship.name)} // Disable dragging if ship is placed
           />
         ))}
       </div>

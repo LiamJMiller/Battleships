@@ -2,13 +2,13 @@
 
 import React from "react";
 
-const Ship = ({ ship, orientation, onDragStart }) => {
+const Ship = ({ ship, orientation, onDragStart, draggable }) => {
   const shipStyle = {
     display: "inline-block",
     width: orientation === "horizontal" ? `${ship.size * 30}px` : "30px",
     height: orientation === "horizontal" ? "30px" : `${ship.size * 30}px`,
     backgroundColor: "gray",
-    cursor: "grab",
+    cursor: draggable ? "grab" : "not-allowed", // Change cursor based on draggable state
     margin: "5px", // Add margin to create space between ships
     position: "relative", // Ensure the text is positioned correctly
   };
@@ -25,7 +25,11 @@ const Ship = ({ ship, orientation, onDragStart }) => {
   };
 
   return (
-    <div draggable onDragStart={(e) => onDragStart(e, ship)} style={shipStyle}>
+    <div
+      draggable={draggable}
+      onDragStart={(e) => onDragStart(e, ship)}
+      style={shipStyle}
+    >
       <div style={textStyle}>{ship.name}</div>
     </div>
   );
