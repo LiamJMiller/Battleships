@@ -179,7 +179,8 @@ export default function handler(req, res) {
       console.error("WebSocket server error:", error);
     });
 
-    server.on("upgrade", (request, socket, head) => {
+    // Attach the WebSocket server to the HTTP server
+    req.socket.server.on("upgrade", (request, socket, head) => {
       websocketServer.handleUpgrade(request, socket, head, (ws) => {
         websocketServer.emit("connection", ws, request);
       });
