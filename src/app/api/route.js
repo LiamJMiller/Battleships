@@ -1,6 +1,6 @@
 /** @format */
 
-import { Server } from "ws";
+import { WebSocketServer } from "ws";
 
 let lobbies = {};
 
@@ -82,7 +82,7 @@ const generateLobbyCode = () => {
 };
 
 export function setupWebSocketServer(server) {
-  const websocketServer = new Server({ server });
+  const websocketServer = new WebSocketServer({ server });
 
   websocketServer.on("connection", (socket) => {
     console.log("New WebSocket connection established");
