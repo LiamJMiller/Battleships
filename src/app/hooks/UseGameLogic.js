@@ -1,8 +1,12 @@
 /** @format */
 
 import { useState } from "react";
-import { createEmptyBoard, canPlaceShip, placeShip } from "../utils/gameLogic"; // Ensure these functions are correctly imported
-import { ships } from "../utils/gameLogic"; // Import ships from gameLogic.js
+import {
+  createEmptyBoard,
+  canPlaceShip,
+  placeShip,
+  ships,
+} from "../utils/gameLogic"; // Ensure these functions are correctly imported
 
 export const useGameLogic = () => {
   const [playerBoard, setPlayerBoard] = useState(createEmptyBoard());
@@ -16,6 +20,10 @@ export const useGameLogic = () => {
   };
 
   const placeShipOnBoard = (rowIndex, cellIndex, ship) => {
+    if (currentShipIndex >= ships.length) {
+      console.log("All ships placed");
+      return false;
+    }
     console.log("Placing ship:", ship);
     if (
       canPlaceShip(playerBoard, rowIndex, cellIndex, ship.size, orientation)

@@ -4,34 +4,6 @@
 import React from "react";
 import "./Board.css";
 
-// const GameBoard = ({ board, onCellClick, onDragOver, onDrop }) => {
-//   return (
-//     <div
-//       style={{
-//         display: "grid",
-//         gridTemplateColumns: `repeat(${board[0].length}, 30px)`,
-//       }}
-//     >
-//       {board.map((row, rowIndex) =>
-//         row.map((cell, colIndex) => (
-//           <div
-//             key={`${rowIndex}-${colIndex}`}
-//             onClick={() => onCellClick(rowIndex, colIndex)}
-//             onDragOver={(e) => onDragOver(e, rowIndex, colIndex)}
-//             onDrop={(e) => onDrop(e, rowIndex, colIndex)}
-//             style={{
-//               width: 30,
-//               height: 30,
-//               border: "1px solid black",
-//               backgroundColor: cell === 1 ? "gray" : "white",
-//             }}
-//           ></div>
-//         ))
-//       )}
-//     </div>
-//   );
-// };
-
 const Board = ({ board, onCellClick, onDragOver, onDrop }) => {
   return (
     <div className="board">
@@ -45,7 +17,7 @@ const Board = ({ board, onCellClick, onDragOver, onDrop }) => {
               onDragOver={onDragOver}
               onDrop={(e) => onDrop(e, rowIndex, cellIndex)}
             >
-              {cell}
+              {/* {cell}  //text if you want to see the ship names*/}
             </div>
           ))}
         </div>
