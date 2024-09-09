@@ -8,7 +8,7 @@ import {
   ships,
 } from "../utils/gameLogic"; // Ensure these functions are correctly imported
 
-export const useGameLogic = () => {
+const useGameLogic = () => {
   const [playerBoard, setPlayerBoard] = useState(createEmptyBoard());
   const [currentShipIndex, setCurrentShipIndex] = useState(0);
   const [orientation, setOrientation] = useState("horizontal");
@@ -56,3 +56,5 @@ export const useGameLogic = () => {
     placeShipOnBoard,
   };
 };
+
+export default useGameLogic;

@@ -1,7 +1,7 @@
 /** @format */
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Board from "../components/Board"; // Ensure you have this component created
 import Ship from "../components/Ship"; // Import the Ship component
@@ -11,6 +11,7 @@ import "../globals.css"; // Import global styles
 
 export default function WaitingPage() {
   const [isReady, setIsReady] = useState(false);
+  const [isSocketOpen, setIsSocketOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [players, setPlayers] = useState([]);
   const [placedShips, setPlacedShips] = useState([]); // Track placed ships
@@ -29,11 +30,7 @@ export default function WaitingPage() {
     placeShipOnBoard,
   } = useGameLogic();
 
-  useEffect(() => {
-    createWebSocketConnection();
-  }, [createWebSocketConnection]);
-
-  const createWebSocketConnection = () => {
+  const createWebSocketConnection = useCallback(() => {
     const websocketUrl =
       process.env.NEXT_PUBLIC_WEBSOCKET_URL ||
       `wss://${process.env.VERCEL_URL}/api/socket`;
@@ -83,7 +80,11 @@ export default function WaitingPage() {
         }, 1000);
       }
     };
-  };
+  }, [lobbyCode, playerName, router]);
+
+  useEffect(() => {
+    createWebSocketConnection();
+  }, [createWebSocketConnection]);
 
   const toggleReady = () => {
     if (!isSocketOpen) return;

@@ -11,6 +11,14 @@ export default function Game({ socket, playerId, initialBoards }) {
   const [hits, setHits] = useState([]); // Track hits
   const [waiting, setWaiting] = useState(true); // State to track if waiting for an opponent
 
+  const handleOpponentMove = (rowIndex, colIndex) => {
+    if (playerBoards[playerId][rowIndex][colIndex] === 1) {
+      setHits([...hits, { rowIndex, colIndex }]);
+    }
+    // Switch turn
+    setCurrentTurn(playerId);
+  };
+
   useEffect(() => {
     if (socket) {
       socket.onmessage = (event) => {
@@ -36,7 +44,7 @@ export default function Game({ socket, playerId, initialBoards }) {
         );
       };
     }
-  }, [socket]);
+  }, [socket, handleOpponentMove]);
 
   const handleCellClick = (rowIndex, colIndex) => {
     if (placingShip) {
@@ -61,14 +69,6 @@ export default function Game({ socket, playerId, initialBoards }) {
     }
   };
 
-  const handleOpponentMove = (rowIndex, colIndex) => {
-    if (playerBoards[playerId][rowIndex][colIndex] === 1) {
-      setHits([...hits, { rowIndex, colIndex }]);
-    }
-    // Switch turn
-    setCurrentTurn(playerId);
-  };
-
   return (
     <div>
       <h1>Battleship Game</h1>
@@ -78,12 +78,12 @@ export default function Game({ socket, playerId, initialBoards }) {
         <>
           {playerId && (
             <>
-              <h2>Player {playerId}'s Board</h2>
+              <h2>Player {playerId}&apos;s Board</h2>
               <Board
                 board={playerBoards[playerId]}
                 onCellClick={handleCellClick}
               />
-              <h2>Opponent's Board</h2>
+              <h2>Opponent&apos;s Board</h2>
               <Board
                 board={playerBoards[3 - playerId]}
                 onCellClick={handleCellClick}
