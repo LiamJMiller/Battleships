@@ -2,11 +2,11 @@
   "version": 2,
   "builds": [
     {
-      "src": "next.config.mjs",
+      "src": "package.json",
       "use": "@vercel/next"
     }
   ],
   "env": {
-    "NEXT_PUBLIC_WEBSOCKET_URL": "ws://your-production-websocket-url"
+    "NEXT_PUBLIC_WEBSOCKET_URL": ""
   }
 }

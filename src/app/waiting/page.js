@@ -35,7 +35,10 @@ export default function WaitingPage() {
   }, []);
 
   const createWebSocketConnection = () => {
-    socketRef.current = new WebSocket(process.env.NEXT_PUBLIC_WEBSOCKET_URL);
+    const websocketUrl =
+      process.env.NEXT_PUBLIC_WEBSOCKET_URL ||
+      `wss://${process.env.VERCEL_URL}/api/socket`;
+    socketRef.current = new WebSocket(websocketUrl);
 
     socketRef.current.onopen = () => {
       console.log("WebSocket connection opened");
