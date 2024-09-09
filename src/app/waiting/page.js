@@ -5,8 +5,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Board from "../components/Board"; // Ensure you have this component created
 import Ship from "../components/Ship"; // Import the Ship component
-import useGameLogic from "../hooks/useGameLogic";
-import { ships } from "../utils/gameLogic";
+import useGameLogic from "../../hooks/useGameLogic";
+import { ships } from "../../utils/gameLogic";
 import "../globals.css"; // Import global styles
 
 export default function WaitingPage() {
